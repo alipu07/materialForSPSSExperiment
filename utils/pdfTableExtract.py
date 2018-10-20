@@ -1,8 +1,12 @@
 from bs4 import BeautifulSoup as bs
 import os
 import numpy as np
-os.chdir(os.path.join('experiments', 'e1'))
-fhdlr = open('table2_1.html',encoding='utf-8')
+
+expName = 'e1'
+inputFilename = 'table2_3'
+
+os.chdir(os.path.join('experiments', expName))
+fhdlr = open(f'{inputFilename}.html',encoding='utf-8')
 txtraw = fhdlr.read()
 fhdlr.close()
 htmlraw = bs(txtraw,'lxml')
@@ -85,6 +89,6 @@ class table:
 
 tbl = table(cells)
 
-fhdlr = open('table2_1.csv',mode='w')
+fhdlr = open(f'{inputFilename}.csv',mode='w')
 fhdlr.write(tbl.csvOutput(','))
 fhdlr.close()
