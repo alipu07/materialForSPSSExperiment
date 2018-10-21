@@ -2,16 +2,28 @@ from bs4 import BeautifulSoup as bs
 import os
 import numpy as np
 
-expName = 'e1'
-inputFilename = 'table2_3'
+import argparse
+ap = argparse.ArgumentParser()
+ap.add_argument('-e','--expname',default='3',help='experiment name')
+ap.add_argument('-t','--table',type=str,default='1',help='data table name')
+args = vars(ap.parse_args())
 
-os.chdir(os.path.join('experiments', expName))
-fhdlr = open(f'{inputFilename}.html',encoding='utf-8')
+os.chdir(os.path.join('experiments', f'e{args["expname"]}'))
+fhdlr = open(f'table{args["expname"]}_{args["table"]}.html',encoding='utf-8')
 txtraw = fhdlr.read()
 fhdlr.close()
-htmlraw = bs(txtraw,'lxml')
-cells = htmlraw.find_all("div", class_="textLayer")[0].contents
-cells = [e for e in cells if e.name=='div']
+htmlraw = bs(txtraw,'html.parser')
+cells = htmlraw.find_all("div", class_="textLayer")
+cellsContents = [e.find_all("div") for e in cells]
+
+# reduce contents
+def combineArr(a):
+    rst = []
+    for e in a:
+        rst = rst+e
+    return rst
+cellsContents = combineArr(cellsContents)
+
 
 # for e in cells[:1]:
 #     style = styleAttributeExtract(e)
@@ -60,7 +72,6 @@ class attribute:
     def getLocation(self):
         return (self.getAttr('left'),self.getAttr('top'))
 
-cells = [cell(e) for e in cells]
 
 class table:
     def __init__(self,cells):
@@ -69,12 +80,13 @@ class table:
         self.colNum = 0
         self.cursorY = 0
         for c in self.cells:
-            if c.getY()>self.cursorY:
+            if not c.getY()==self.cursorY:
+            # 当出现分页的时候新一行的Y会比上一行小，所以原来的c.getY()==self.cursorY会出错
                 self.rowNum = self.rowNum + 1
                 self.cursorY = c.getY()
             if self.rowNum == 1:
                 self.colNum = self.colNum + 1
-        assert(self.rowNum*self.colNum==len(self.cells))
+        assert self.rowNum*self.colNum==len(self.cells), print(f'col:{self.colNum},row:{self.rowNum}, len:{len(self.cells)}')
         self.cellContent = [str(cell) for cell in cells]
         self.tableNp = np.array(self.cells).reshape(self.rowNum,self.colNum)
     def csvOutput(self,sep):
@@ -87,8 +99,9 @@ class table:
     def getTableNp(self):
         return self.tableNp
 
-tbl = table(cells)
+cellsContents = [cell(e) for e in cellsContents]
+tbl = table(cellsContents)
 
-fhdlr = open(f'{inputFilename}.csv',mode='w')
+fhdlr = open(f'table{args["expname"]}_{args["table"]}.csv',mode='w')
 fhdlr.write(tbl.csvOutput(','))
 fhdlr.close()
